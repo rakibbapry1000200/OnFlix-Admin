@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Video & Slider Management</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    
+    <style>
+        /* Base & Utility Styles (Dark Theme) */
+        :root {
+            --primary-color: #e50914; 
+            --secondary-color: #00bcd4; 
+            --bg-color: #1a1a1a; 
+            --card-bg: #121212; 
+            --text-color: #ffffff; 
+            --text-muted: #888; 
+            --danger-color: #dc3545; 
+            --success-color: #28a745; 
+            --border-color: #333; 
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px 20px 80px 20px; 
+        }
+
+        h1 {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0;
+            background: var(--card-bg);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+        }
+
+        /* Content Management Sections */
+        .admin-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #222; 
+        }
+        
+        .master-section {
+            padding: 20px;
+            display: none; 
+        }
+        
+        .master-section.active {
+            display: block; 
+        }
+
+        /* Form, Button, List Styles */
+        .form-group { margin-bottom: 15px; }
+        label { color: #fff; display: block; margin-bottom: 5px; font-weight: 600; }
+        input[type="text"], textarea, select {
+            width: 100%; padding: 10px; border: 1px solid var(--border-color); 
+            border-radius: 5px; font-size: 16px; box-sizing: border-box;
+            background-color: #333; 
+            color: var(--text-color);
+        }
+        
+        .checkbox-group label { display: flex; align-items: center; font-weight: normal; }
+        .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; transform: scale(1.2); }
+
+        /* General Button Styles (Icon-Focused) */
+        .btn-icon {
+            padding: 8px; 
+            height: 38px; 
+            width: 38px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px; 
+            transition: background-color 0.2s, transform 0.2s;
+            margin-right: 5px; 
+        }
+        .btn-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            display: block;
+        }
+
+        /* Specific Button Colors */
+        .btn-primary-icon { background-color: var(--primary-color); color: white; }
+        .btn-primary-icon:hover { background-color: #c90812; transform: scale(1.05); }
+        
+        .btn-danger-icon { background-color: var(--danger-color); color: white; }
+        .btn-danger-icon:hover { background-color: #b22232; transform: scale(1.05); }
+        
+        .btn-edit-icon { background-color: #ffc107; color: var(--card-bg); }
+        .btn-edit-icon:hover { background-color: #e0a800; transform: scale(1.05); }
+        
+        .btn-slider-icon { background-color: var(--secondary-color); color: var(--card-bg); }
+        .btn-slider-icon:hover { background-color: #008fa0; transform: scale(1.05); }
+        
+        /* Form Button Layout */
+        #videoUploadForm .btn-icon, #sliderUploadForm .btn-icon { 
+            margin-right: 15px; 
+            width: auto; 
+            padding: 10px 15px; 
+        }
+        #videoUploadForm .btn-icon svg, #sliderUploadForm .btn-icon svg { 
+            margin-right: 5px;
+            width: 18px; 
+            height: 18px;
+        }
+
+        /* List Styles (Used only for Slider) */
+        .content-list { margin-top: 20px; }
+        .list-item {
+            display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--border-color);
+        }
+        .item-info { flex-grow: 1; padding-right: 15px; }
+        .item-title { font-weight: 700; font-size: 1.1em; }
+        .item-meta { font-size: 0.9em; color: var(--text-muted); }
+        .item-actions { white-space: nowrap; }
+
+        /* Admin Footer Styles (3 tabs) */
+        .admin-footer {
+            position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around;
+            background-color: var(--card-bg); box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.6);
+            z-index: 1000; padding: 8px 0; border-top: 1px solid var(--border-color);
+        }
+
+        .admin-footer .footer-item {
+            display: flex; flex-direction: column; align-items: center; padding: 5px;
+            color: var(--text-muted); text-decoration: none; transition: color 0.3s, transform 0.2s;
+            width: 30%; 
+        }
+
+        .admin-footer .footer-item.active {
+            color: var(--primary-color); 
+        }
+
+        .admin-footer .footer-item:hover {
+            color: var(--primary-color);
+        }
+
+        .admin-footer .footer-item svg {
+            width: 28px; height: 28px; margin-bottom: 2px; fill: currentColor;
+        }
+
+        .admin-footer .footer-item span {
+            font-size: 10px; font-weight: 600; text-align: center;
+        }
+        
+        /* Message Box */
+        .alert-message {
+            padding: 10px; margin-bottom: 15px; border-radius: 5px; font-weight: bold;
+        }
+        .alert-success { background-color: #1e392a; color: var(--success-color); border: 1px solid #28a745; }
+        .alert-error { background-color: #4a1f22; color: var(--danger-color); border: 1px solid #dc3545; }
+        
+        /* --- Video Grid View (LIST Section) --- */
+        .category-filter {
+            margin-bottom: 20px;
+        }
+        
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            padding: 10px;
+        }
+        
+        .video-card {
+            background-color: #2e2e2e;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s;
+        }
+        
+        .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
+        }
+
+        .video-card-thumb {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .video-card-info {
+            padding: 10px;
+        }
+
+        .video-card-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin: 0 0 5px 0;
+            height: 2.4em; /* Two lines */
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        .video-card-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .video-card-actions .btn-icon {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>ভিডিও প্ল্যাটফর্ম এডমিন প্যানেল</h1>
+        
+        <div id="message" class="alert-message" style="display:none;"></div>
+
+        <div class="master-section active" id="videoMasterSection">
+            
+            <div class="admin-section">
+                <h2>ভিডিও আপলোড করুন</h2>
+                <form id="videoUploadForm">
+                    <input type="hidden" id="videoKey" value="">
+
+                    <div class="form-group">
+                        <label for="videoCategory">ক্যাটেগরি নির্বাচন করুন:</label>
+                        <select id="videoCategory" required>
+                            <option value="">-- ক্যাটেগরি নির্বাচন করুন --</option>
+                            <option value="Movie">মুভি</option>
+                            <option value="Drama">নাটক</option>
+                            <option value="Web Series">ওয়েব সিরিজ</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="videoTitle">ভিডিও টাইটেল:</label><input type="text" id="videoTitle" required></div>
+                    <div class="form-group"><label for="videoDescription">সংক্ষিপ্ত বর্ণনা:</label><textarea id="videoDescription" rows="3" required></textarea></div>
+                    <div class="form-group"><label for="videoEmbedLink">এম্বেড লিংক (ইউটিউব/অন্যান্য):</label><input type="text" id="videoEmbedLink" required></div>
+                    <div class="form-group"><label for="videoThumbnailURL">থাম্বনেইল URL:</label><input type="text" id="videoThumbnailURL" required></div>
+
+                    <button type="submit" class="btn-icon btn-primary-icon" id="videoUploadBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 16H8v-1h8v1zm1-4H7V8h10v7zm-5-1l-2-2-2 2h4z"/></svg>
+                        <span>আপলোড</span>
+                    </button>
+                    <button type="button" class="btn-icon btn-danger-icon" id="videoCancelEditBtn" style="display:none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.29 14.29c.39.39.39 1.02 0 1.41-.39.39-1.02.39-1.41 0L12 13.41l-2.88 2.88c-.39.39-1.02.39-1.41 0-.39-.39-.39-1.02 0-1.41L10.59 12 7.71 9.12c-.39-.39-.39-1.02 0-1.41.39-.39 1.02-.39 1.41 0L12 10.59l2.88-2.88c.39-.39 1.02-.39 1.41 0 .39.39.39 1.02 0 1.41L13.41 12l2.88 2.88c.39.39.39 1.02 0 1.41z"/></svg>
+                        <span>বাতিল</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="master-section" id="listMasterSection">
+            <div class="admin-section">
+                <h2>সকল ভিডিও দেখুন ও পরিচালনা করুন</h2>
+                
+                <div class="form-group category-filter">
+                    <label for="listCategoryFilter">ক্যাটেগরি অনুযায়ী ফিল্টার করুন:</label>
+                    <select id="listCategoryFilter" onchange="filterAndRenderVideoGrid()">
+                        <option value="All">সকল ভিডিও</option>
+                        <option value="Movie">মুভি</option>
+                        <option value="Drama">নাটক</option>
+                        <option value="Web Series">ওয়েব সিরিজ</option>
+                    </select>
+                </div>
+
+                <div class="video-grid" id="videoGrid">
+                    <p style="color:var(--text-muted);">ভিডিও লোড হচ্ছে...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="master-section" id="sliderMasterSection">
+            
+            <div class="admin-section">
+                <h2>স্লাইডার আপলোড/এডিট করুন</h2>
+                <form id="sliderUploadForm">
+                    <input type="hidden" id="sliderKey" value="">
+
+                    <div class="form-group"><label for="sliderDescription">সংক্ষিপ্ত বর্ণনা (ঐচ্ছিক):</label><input type="text" id="sliderDescription" placeholder="এটি কিসের স্লাইডার/বিজ্ঞাপন (ঐচ্ছিক)" value=""></div>
+                    
+                    <div class="form-group"><label for="sliderClickURL">ক্লিক করলে যে লিংকে যাবে (ঐচ্ছিক):</label><input type="text" id="sliderClickURL" placeholder="লিংক না দিলে স্লাইডারটি ক্লিকযোগ্য হবে না"></div>
+                    
+                    <div class="form-group"><label for="sliderThumbnailURL">স্লাইডার ইমেজ URL:</label><input type="text" id="sliderThumbnailURL" required></div>
+                    
+                    <div class="form-group checkbox-group">
+                        <label for="sliderClickable">
+                            <input type="checkbox" id="sliderClickable" disabled> 
+                            স্লাইডার ক্লিকযোগ্য হবে
+                            <span style="font-size:0.8em; color:var(--text-muted); margin-left:10px;">(লিংক দেওয়া থাকলে এটি সক্রিয় থাকবে)</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-icon btn-slider-icon" id="sliderUploadBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                        <span>আপলোড</span>
+                    </button>
+                    <button type="button" class="btn-icon btn-danger-icon" id="sliderCancelEditBtn" style="display:none;">
+                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.29 14.29c.39.39.39 1.02 0 1.41-.39.39-1.02.39-1.41 0L12 13.41l-2.88 2.88c-.39.39-1.02.39-1.41 0-.39-.39-.39-1.02 0-1.41L10.59 12 7.71 9.12c-.39-.39-.39-1.02 0-1.41.39-.39 1.02-.39 1.41 0L12 10.59l2.88-2.88c.39-.39 1.02-.39 1.41 0 .39.39.39 1.02 0 1.41L13.41 12l2.88 2.88c.39.39.39 1.02 0 1.41z"/></svg>
+                        <span>বাতিল</span>
+                    </button>
+                </form>
+            </div>
+            
+            <div class="admin-section">
+                <h2>স্লাইডার লিস্ট (থাম্বনেইল দেখাবে)</h2>
+                <div class="content-list" id="sliderList">
+                     <p>স্লাইডার লোড হচ্ছে...</p>
+                </div>
+            </div>
+
+        </div>
+
+    </div> 
+    
+    <div class="admin-footer">
+        <a href="#" class="footer-item active" id="footer-video" data-target="videoMasterSection">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H7V5h10v14zM12 7c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            <span>ভিডিও আপলোড</span>
+        </a>
+        <a href="#" class="footer-item" id="footer-list" data-target="listMasterSection">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zm0-8h14V7H7v2z"/></svg>
+            <span>ভিডিও লিস্ট</span>
+        </a>
+        <a href="#" class="footer-item" id="footer-slider" data-target="sliderMasterSection">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-4.75-9.25c.69 0 1.25-.56 1.25-1.25s-.56-1.25-1.25-1.25-1.25.56-1.25 1.25.56 1.25 1.25 1.25zm9.5 0c.69 0 1.25-.56 1.25-1.25s-.56-1.25-1.25-1.25-1.25.56-1.25 1.25.56 1.25 1.25 1.25z"/></svg>
+            <span>স্লাইডার</span>
+        </a>
+    </div>
+
+    <script>
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBakmRixYRaHzuaR-pAUHkOJUlDG9qflJA",
+            authDomain: "ad420-1780f.firebaseapp.com",
+            databaseURL: "https://ad420-1780f-default-rtdb.firebaseio.com",
+            projectId: "ad420-1780f",
+            storageBucket: "ad420-1780f.firebasestorage.app",
+            messagingSenderId: "479314410995",
+            appId: "1:479314410995:web:6f7a99e1be874d69fd2686"
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = app.database();
+        
+        // --- Separate Firebase References ---
+        const videosRef = database.ref('videos');
+        const slidersRef = database.ref('sliders');
+
+        // --- Global Data Storage ---
+        let allVideosArray = []; 
+
+        // --- DOM Elements ---
+        const messageBox = document.getElementById('message');
+
+        // Video Form Elements
+        const videoUploadForm = document.getElementById('videoUploadForm');
+        const videoUploadBtn = document.getElementById('videoUploadBtn');
+        const videoCancelEditBtn = document.getElementById('videoCancelEditBtn');
+        
+        // Slider Form Elements
+        const sliderUploadForm = document.getElementById('sliderUploadForm');
+        const sliderCancelEditBtn = document.getElementById('sliderCancelEditBtn');
+        const sliderListContainer = document.getElementById('sliderList');
+        const sliderClickURLInput = document.getElementById('sliderClickURL');
+        const sliderClickableCheckbox = document.getElementById('sliderClickable');
+        
+        // List Section Elements
+        const listCategoryFilter = document.getElementById('listCategoryFilter');
+        const videoGridContainer = document.getElementById('videoGrid');
+
+
+        // --- Utility Functions ---
+        function showMessage(msg, type = 'success') {
+            messageBox.textContent = msg;
+            messageBox.className = `alert-message alert-${type}`;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000);
+        }
+        
+        function syncSliderClickable() {
+            const hasLink = sliderClickURLInput.value.trim().length > 0;
+            sliderClickableCheckbox.checked = hasLink;
+            sliderClickableCheckbox.disabled = !hasLink;
+        }
+
+        sliderClickURLInput.addEventListener('input', syncSliderClickable);
+
+        // --- Reset Forms ---
+        function resetVideoForm() {
+            videoUploadForm.reset();
+            document.getElementById('videoKey').value = '';
+            videoUploadBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 16H8v-1h8v1zm1-4H7V8h10v7zm-5-1l-2-2-2 2h4z"/></svg><span>আপলোড</span>';
+            videoCancelEditBtn.style.display = 'none';
+        }
+        
+        function resetSliderForm() {
+            sliderUploadForm.reset();
+            document.getElementById('sliderKey').value = '';
+            document.getElementById('sliderUploadBtn').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><span>আপলোড</span>';
+            sliderCancelEditBtn.style.display = 'none';
+            syncSliderClickable(); 
+        }
+
+        // --- Fill Forms for Edit ---
+        function fillVideoFormForEdit(video) {
+            // Switch to the Video Upload Tab for editing
+            switchTab('videoMasterSection'); 
+            
+            document.getElementById('videoKey').value = video.key;
+            document.getElementById('videoCategory').value = video.category || '';
+            document.getElementById('videoTitle').value = video.title || '';
+            document.getElementById('videoDescription').value = video.description || '';
+            document.getElementById('videoEmbedLink').value = video.embedLink || '';
+            document.getElementById('videoThumbnailURL').value = video.thumbnailURL || '';
+
+            // Update button to show "Update" text and icon
+            videoUploadBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 10V4.5L19.5 10M5 3C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V9L15 3H5Z"/></svg><span>আপডেট</span>';
+            videoCancelEditBtn.style.display = 'inline-block';
+            window.scrollTo({ top: document.getElementById('videoMasterSection').offsetTop, behavior: 'smooth' });
+        }
+        
+        function fillSliderFormForEdit(slider) {
+            switchTab('sliderMasterSection');
+            
+            document.getElementById('sliderKey').value = slider.key;
+            document.getElementById('sliderDescription').value = slider.description || ''; 
+            document.getElementById('sliderClickURL').value = slider.clickURL || ''; 
+            document.getElementById('sliderThumbnailURL').value = slider.thumbnailURL || '';
+            
+            sliderClickableCheckbox.checked = slider.clickable === 'true'; 
+            syncSliderClickable(); 
+
+            document.getElementById('sliderUploadBtn').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 10V4.5L19.5 10M5 3C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V9L15 3H5Z"/></svg><span>আপডেট</span>';
+            sliderCancelEditBtn.style.display = 'inline-block';
+            window.scrollTo({ top: document.getElementById('sliderMasterSection').offsetTop, behavior: 'smooth' });
+        }
+        
+        // --- CRUD Operations ---
+
+        // 1. VIDEO UPLOAD/EDIT
+        videoUploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const videoKey = document.getElementById('videoKey').value;
+            const videoData = {
+                category: document.getElementById('videoCategory').value,
+                title: document.getElementById('videoTitle').value,
+                description: document.getElementById('videoDescription').value,
+                embedLink: document.getElementById('videoEmbedLink').value,
+                thumbnailURL: document.getElementById('videoThumbnailURL').value,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            const actionPromise = videoKey ? videosRef.child(videoKey).update(videoData) : videosRef.push(videoData);
+
+            actionPromise.then(() => {
+                showMessage(`ভিডিও সফলভাবে ${videoKey ? 'আপডেট' : 'আপলোড'} করা হয়েছে।`, 'success');
+                resetVideoForm();
+                
+                // Switch to List view after a successful new upload
+                if (!videoKey) {
+                    switchTab('listMasterSection');
+                }
+            }).catch(error => {
+                showMessage(`${videoKey ? 'ভিডিও আপডেট' : 'ভিডিও আপলোড'} ব্যর্থ হয়েছে: ${error.message}`, 'error');
+            });
+        });
+        videoCancelEditBtn.addEventListener('click', resetVideoForm);
+
+        // 2. SLIDER UPLOAD/EDIT
+        sliderUploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const sliderKey = document.getElementById('sliderKey').value;
+            
+            const clickURL = sliderClickURLInput.value.trim();
+            const isClickable = clickURL.length > 0;
+            
+            const sliderData = {
+                description: document.getElementById('sliderDescription').value, 
+                clickURL: clickURL, 
+                thumbnailURL: document.getElementById('sliderThumbnailURL').value,
+                clickable: isClickable ? 'true' : 'false', 
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+
+            if (!sliderData.thumbnailURL) {
+                showMessage('স্লাইডার ইমেজ URL আবশ্যক!', 'error');
+                return;
+            }
+
+            const actionPromise = sliderKey ? slidersRef.child(sliderKey).update(sliderData) : slidersRef.push(sliderData);
+
+            actionPromise.then(() => {
+                showMessage(`স্লাইডার সফলভাবে ${sliderKey ? 'আপডেট' : 'আপলোড'} করা হয়েছে।`, 'success');
+                resetSliderForm();
+            }).catch(error => {
+                showMessage(`${sliderKey ? 'স্লাইডার আপডেট' : 'স্লাইডার আপলোড'} ব্যর্থ হয়েছে: ${error.message}`, 'error');
+            });
+        });
+        sliderCancelEditBtn.addEventListener('click', resetSliderForm);
+
+        // 3. DELETE Operations
+        function deleteVideo(key, title) {
+            if (confirm(`আপনি কি "${title}" ভিডিওটি স্থায়ীভাবে মুছে ফেলতে চান?`)) {
+                videosRef.child(key).remove().then(() => {
+                    showMessage('ভিডিও সফলভাবে মুছে ফেলা হয়েছে।', 'success');
+                }).catch(error => {
+                    showMessage(`মুছে ফেলা ব্যর্থ হয়েছে: ${error.message}`, 'error');
+                });
+            }
+        }
+        
+        function deleteSlider(key, title) {
+            if (confirm(`আপনি কি "${title}" স্লাইডারটি স্থায়ীভাবে মুছে ফেলতে চান?`)) {
+                slidersRef.child(key).remove().then(() => {
+                    showMessage('স্লাইডার সফলভাবে মুছে ফেলা হয়েছে।', 'success');
+                }).catch(error => {
+                    showMessage(`মুছে ফেলা ব্যর্থ হয়েছে: ${error.message}`, 'error');
+                });
+            }
+        }
+        
+        // 4. RENDER SLIDER LIST (The only regular list view remaining)
+        function createSliderListItem(item) {
+            const elementKey = item.key;
+            
+            const li = document.createElement('div');
+            li.className = 'list-item';
+            
+            const sliderDesc = item.description ? item.description.trim() : '';
+            const sliderURL = item.clickURL ? item.clickURL.trim() : '';
+            
+            let displayTitle;
+            let deleteTitleForConfirm;
+            
+            if (sliderDesc.length > 0) {
+                deleteTitleForConfirm = sliderDesc;
+                displayTitle = deleteTitleForConfirm.length > 40 ? deleteTitleForConfirm.substring(0, 40) + '...' : deleteTitleForConfirm;
+            } else if (sliderURL.length > 0) {
+                deleteTitleForConfirm = `লিংক: ${sliderURL}`;
+                displayTitle = `লিংক: ${sliderURL.substring(0, 40)}...`;
+            } else {
+                deleteTitleForConfirm = 'নামহীন স্লাইডার';
+                displayTitle = deleteTitleForConfirm;
+            }
+            
+            const metaInfo = `থাম্বনেইল: <img src="${item.thumbnailURL}" style="height:30px; vertical-align:middle; margin-right: 10px;"> | ক্লিকযোগ্য: ${item.clickable === 'true' ? 'হ্যাঁ' : 'না'}`;
+            
+            const escapedDeleteTitle = deleteTitleForConfirm.replace(/'/g, "\\'"); 
+            
+            li.innerHTML = `
+                <div class="item-info">
+                    <div class="item-title">${displayTitle}</div>
+                    <div class="item-meta">${metaInfo}</div>
+                </div>
+                <div class="item-actions">
+                    <button class="btn-icon btn-edit-icon" title="Edit" onclick='editContent("slider", ${JSON.stringify(item)})'>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    </button>
+                    <button class="btn-icon btn-danger-icon" title="Delete" onclick="deleteSlider('${elementKey}', '${escapedDeleteTitle}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                </div>
+            `;
+            return li;
+        }
+        
+        function renderSliderList(sliders) {
+            sliderListContainer.innerHTML = '';
+            if (sliders.length === 0) {
+                 sliderListContainer.innerHTML = '<p style="color:var(--text-muted);">কোনো স্লাইডার আপলোড করা হয়নি।</p>';
+                 return;
+            }
+            sliders.slice().reverse().forEach(slider => {
+                sliderListContainer.appendChild(createSliderListItem(slider));
+            });
+        }
+        
+        // --- Video Grid Rendering Logic (For List Section) ---
+        function createVideoGridCard(video) {
+            const card = document.createElement('div');
+            card.className = 'video-card';
+            
+            const cleanTitle = video.title || 'শিরোনাম নেই';
+            const escapedDeleteTitle = cleanTitle.replace(/'/g, "\\'");
+            
+            card.innerHTML = `
+                <img src="${video.thumbnailURL}" onerror="this.onerror=null;this.src='https://via.placeholder.com/200x112.png?text=No+Thumb';" alt="${cleanTitle}" class="video-card-thumb">
+                <div class="video-card-info">
+                    <h4 class="video-card-title">${cleanTitle}</h4>
+                    <div class="video-card-actions">
+                        <button class="btn-icon btn-edit-icon" title="Edit (Upload Section)" onclick='editContent("video", ${JSON.stringify(video)})'>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        </button>
+                        <button class="btn-icon btn-danger-icon" title="Delete" onclick="deleteVideo('${video.key}', '${escapedDeleteTitle}')">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        function filterAndRenderVideoGrid() {
+            const selectedCategory = listCategoryFilter.value;
+            videoGridContainer.innerHTML = '';
+
+            const filteredVideos = allVideosArray.filter(video => 
+                selectedCategory === 'All' || video.category === selectedCategory
+            );
+
+            if (filteredVideos.length === 0) {
+                 videoGridContainer.innerHTML = `<p style="color:var(--text-muted);">এই ক্যাটেগরিতে কোনো ভিডিও খুঁজে পাওয়া যায়নি।</p>`;
+                 return;
+            }
+            
+            // Sort by newest first 
+            filteredVideos.slice().reverse().forEach(video => {
+                videoGridContainer.appendChild(createVideoGridCard(video));
+            });
+        }
+        
+        // Global functions for inline JS
+        window.editContent = (type, item) => {
+            if (type === 'video') {
+                fillVideoFormForEdit(item);
+            } else if (type === 'slider') {
+                fillSliderFormForEdit(item);
+            }
+        };
+        
+        window.deleteVideo = deleteVideo;
+        window.deleteSlider = deleteSlider;
+        window.filterAndRenderVideoGrid = filterAndRenderVideoGrid;
+
+        // --- Data Listeners ---
+        videosRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            const videosArray = [];
+            for (let key in data) { 
+                if (data.hasOwnProperty(key)) { 
+                    videosArray.push({ key: key, ...data[key] }); 
+                } 
+            }
+            allVideosArray = videosArray; // Update global array
+            
+            // Update grid view if the List tab is currently active
+            if (document.getElementById('listMasterSection').classList.contains('active')) {
+                filterAndRenderVideoGrid(); 
+            }
+            
+        }, (error) => {
+            // Update list container to show error if necessary
+            if (document.getElementById('listMasterSection').classList.contains('active')) {
+                videoGridContainer.innerHTML = '<p style="color:var(--danger-color);">ভিডিও লোড করতে সমস্যা হচ্ছে।</p>';
+            }
+        });
+
+        slidersRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            const slidersArray = [];
+            for (let key in data) { 
+                if (data.hasOwnProperty(key)) { 
+                    slidersArray.push({ key: key, ...data[key] }); 
+                } 
+            }
+            renderSliderList(slidersArray);
+        }, (error) => {
+            sliderListContainer.innerHTML = '<p style="color:var(--danger-color);">স্লাইডার লোড করতে সমস্যা হচ্ছে।</p>';
+        });
+        
+        // --- Footer Navigation Logic ---
+        const masterSections = document.querySelectorAll('.master-section');
+        const footerItems = document.querySelectorAll('.admin-footer .footer-item');
+        
+        function switchTab(targetId) {
+            masterSections.forEach(section => section.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
+            
+            footerItems.forEach(item => item.classList.remove('active'));
+            document.querySelector(`[data-target="${targetId}"]`).classList.add('active');
+            
+            resetVideoForm(); 
+            resetSliderForm();
+
+            // Special action for the list tab
+            if (targetId === 'listMasterSection') {
+                listCategoryFilter.value = 'All';
+                filterAndRenderVideoGrid(); 
+            }
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        footerItems.forEach(item => {
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+                switchTab(this.getAttribute('data-target'));
+            });
+        });
+
+        // Initial setup
+        syncSliderClickable(); 
+        switchTab('videoMasterSection');
+    </script>
+</body>
+</html>
