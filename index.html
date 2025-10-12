@@ -229,19 +229,56 @@
             padding: 0;
             border-radius: 4px;
         }
+
+        /* --- Search Bar & Autocomplete Styles (NEW) --- */
+        .search-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        #videoSearchInput {
+            padding-right: 40px; /* Space for search icon if needed */
+        }
+        
+        .autocomplete-suggestions {
+            position: absolute;
+            z-index: 10;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            border-top: none;
+            width: 100%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            border-radius: 0 0 5px 5px;
+            left: 0;
+            top: 100%; /* Position right below the input */
+            margin-top: -1px; 
+        }
+
+        .autocomplete-suggestions div {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #222;
+            font-size: 0.9em;
+        }
+
+        .autocomplete-suggestions div:hover,
+        .autocomplete-suggestions .autocomplete-active {
+            background-color: #333;
+            color: var(--primary-color);
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>ভিডিও প্ল্যাটফর্ম এডমিন প্যানেল</h1>
-        
         <div id="message" class="alert-message" style="display:none;"></div>
 
         <div class="master-section active" id="videoMasterSection">
             
             <div class="admin-section">
-                <h2>ভিডিও আপলোড করুন</h2>
+                <h2>ভিডিও আপলোড</h2>
                 <form id="videoUploadForm">
                     <input type="hidden" id="videoKey" value="">
 
@@ -254,10 +291,10 @@
                             <option value="Web Series">ওয়েব সিরিজ</option>
                         </select>
                     </div>
-                    <div class="form-group"><label for="videoTitle">ভিডিও টাইটেল:</label><input type="text" id="videoTitle" required></div>
-                    <div class="form-group"><label for="videoDescription">সংক্ষিপ্ত বর্ণনা:</label><textarea id="videoDescription" rows="3" required></textarea></div>
-                    <div class="form-group"><label for="videoEmbedLink">এম্বেড লিংক (ইউটিউব/অন্যান্য):</label><input type="text" id="videoEmbedLink" required></div>
-                    <div class="form-group"><label for="videoThumbnailURL">থাম্বনেইল URL:</label><input type="text" id="videoThumbnailURL" required></div>
+                    <div class="form-group"><label for="videoTitle">টাইটেল:</label><input type="text" id="videoTitle" required></div>
+                    <div class="form-group"><label for="videoDescription">ডিপক্রিপশন: </label><textarea id="videoDescription" rows="3" required></textarea></div>
+                    <div class="form-group"><label for="videoEmbedLink">ভিডিও লিংক:</label><input type="text" id="videoEmbedLink" required></div>
+                    <div class="form-group"><label for="videoThumbnailURL">থাম্বনেইল:</label><input type="text" id="videoThumbnailURL" required></div>
 
                     <button type="submit" class="btn-icon btn-primary-icon" id="videoUploadBtn">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 16H8v-1h8v1zm1-4H7V8h10v7zm-5-1l-2-2-2 2h4z"/></svg>
@@ -273,10 +310,17 @@
         
         <div class="master-section" id="listMasterSection">
             <div class="admin-section">
-                <h2>সকল ভিডিও দেখুন ও পরিচালনা করুন</h2>
+                <h2>ভিডিও লিষ্ট </h2>
                 
+                <div class="search-container">
+                    <label for="videoSearchInput">Search </label>
+                    <input type="text" id="videoSearchInput" placeholder="ভিডিওর নাম টাইপ করুন..." onkeydown="handleSuggestionNavigation(event)">
+                    <div id="autocompleteSuggestions" class="autocomplete-suggestions" style="display: none;">
+                        </div>
+                </div>
+
                 <div class="form-group category-filter">
-                    <label for="listCategoryFilter">ক্যাটেগরি অনুযায়ী ফিল্টার করুন:</label>
+                    <label for="listCategoryFilter">ফিল্টার করুন:</label>
                     <select id="listCategoryFilter" onchange="filterAndRenderVideoGrid()">
                         <option value="All">সকল ভিডিও</option>
                         <option value="Movie">মুভি</option>
@@ -294,15 +338,15 @@
         <div class="master-section" id="sliderMasterSection">
             
             <div class="admin-section">
-                <h2>স্লাইডার আপলোড/এডিট করুন</h2>
+                <h2>স্লাইডার আপলোড</h2>
                 <form id="sliderUploadForm">
                     <input type="hidden" id="sliderKey" value="">
 
-                    <div class="form-group"><label for="sliderDescription">সংক্ষিপ্ত বর্ণনা (ঐচ্ছিক):</label><input type="text" id="sliderDescription" placeholder="এটি কিসের স্লাইডার/বিজ্ঞাপন (ঐচ্ছিক)" value=""></div>
+                    <div class="form-group"><label for="sliderDescription">টাইটেল(ঐচ্ছিক):</label><input type="text" id="sliderDescription" placeholder="এটি কিসের স্লাইডার/বিজ্ঞাপন (ঐচ্ছিক)" value=""></div>
                     
-                    <div class="form-group"><label for="sliderClickURL">ক্লিক করলে যে লিংকে যাবে (ঐচ্ছিক):</label><input type="text" id="sliderClickURL" placeholder="লিংক না দিলে স্লাইডারটি ক্লিকযোগ্য হবে না"></div>
+                    <div class="form-group"><label for="sliderClickURL">ক্লিকাবল(ঐচ্ছিক):</label><input type="text" id="sliderClickURL" placeholder="লিংক না দিলে স্লাইডারটি ক্লিকযোগ্য হবে না"></div>
                     
-                    <div class="form-group"><label for="sliderThumbnailURL">স্লাইডার ইমেজ URL:</label><input type="text" id="sliderThumbnailURL" required></div>
+                    <div class="form-group"><label for="sliderThumbnailURL">স্লাইডার ইমেজ:</label><input type="text" id="sliderThumbnailURL" required></div>
                     
                     <div class="form-group checkbox-group">
                         <label for="sliderClickable">
@@ -369,6 +413,8 @@
 
         // --- Global Data Storage ---
         let allVideosArray = []; 
+        let filteredVideosArray = []; // To hold the currently filtered list
+        let currentFocus = -1; // For autocomplete keyboard navigation
 
         // --- DOM Elements ---
         const messageBox = document.getElementById('message');
@@ -388,6 +434,10 @@
         // List Section Elements
         const listCategoryFilter = document.getElementById('listCategoryFilter');
         const videoGridContainer = document.getElementById('videoGrid');
+        
+        // Search/Autocomplete Elements (NEW)
+        const videoSearchInput = document.getElementById('videoSearchInput');
+        const autocompleteSuggestions = document.getElementById('autocompleteSuggestions');
 
 
         // --- Utility Functions ---
@@ -541,7 +591,7 @@
             }
         }
         
-        // 4. RENDER SLIDER LIST (The only regular list view remaining)
+        // 4. RENDER SLIDER LIST
         function createSliderListItem(item) {
             const elementKey = item.key;
             
@@ -622,21 +672,33 @@
             return card;
         }
 
-        function filterAndRenderVideoGrid() {
+        // UPDATED: Now accepts an optional searchQuery parameter
+        function filterAndRenderVideoGrid(searchQuery = '') {
             const selectedCategory = listCategoryFilter.value;
             videoGridContainer.innerHTML = '';
-
-            const filteredVideos = allVideosArray.filter(video => 
+            
+            // Step 1: Filter by Category
+            let videosToRender = allVideosArray.filter(video => 
                 selectedCategory === 'All' || video.category === selectedCategory
             );
+            
+            // Step 2: Filter by Search Query
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                videosToRender = videosToRender.filter(video => 
+                    video.title && video.title.toLowerCase().includes(query)
+                );
+            }
+            
+            filteredVideosArray = videosToRender; // Update the global array for the currently filtered list
 
-            if (filteredVideos.length === 0) {
-                 videoGridContainer.innerHTML = `<p style="color:var(--text-muted);">এই ক্যাটেগরিতে কোনো ভিডিও খুঁজে পাওয়া যায়নি।</p>`;
+            if (videosToRender.length === 0) {
+                 videoGridContainer.innerHTML = `<p style="color:var(--text-muted);">এই ক্যাটেগরিতে বা খোঁজার ফলাফলে কোনো ভিডিও খুঁজে পাওয়া যায়নি।</p>`;
                  return;
             }
             
             // Sort by newest first 
-            filteredVideos.slice().reverse().forEach(video => {
+            videosToRender.slice().reverse().forEach(video => {
                 videoGridContainer.appendChild(createVideoGridCard(video));
             });
         }
@@ -654,6 +716,110 @@
         window.deleteSlider = deleteSlider;
         window.filterAndRenderVideoGrid = filterAndRenderVideoGrid;
 
+        // --- NEW Autocomplete Logic ---
+        function closeAllSuggestions() {
+            autocompleteSuggestions.innerHTML = '';
+            autocompleteSuggestions.style.display = 'none';
+            currentFocus = -1;
+        }
+
+        function autocompleteSearch() {
+            const val = videoSearchInput.value;
+            closeAllSuggestions();
+            if (!val) { 
+                // If search input is cleared, re-render the grid based only on category filter
+                filterAndRenderVideoGrid(''); 
+                return false; 
+            }
+            
+            const query = val.toLowerCase();
+            const matchedTitles = new Set();
+            
+            // Get unique titles that match the query
+            allVideosArray.forEach(video => {
+                if (video.title && video.title.toLowerCase().includes(query)) {
+                    matchedTitles.add(video.title);
+                }
+            });
+            
+            // Create suggestion list
+            matchedTitles.forEach(title => {
+                const suggestionDiv = document.createElement('div');
+                suggestionDiv.innerHTML = title;
+                suggestionDiv.addEventListener('click', function(e) {
+                    videoSearchInput.value = this.innerText;
+                    closeAllSuggestions();
+                    listCategoryFilter.value = 'All'; // Reset category filter on search
+                    filterAndRenderVideoGrid(this.innerText); // Filter grid based on selected suggestion
+                });
+                autocompleteSuggestions.appendChild(suggestionDiv);
+            });
+            
+            if (autocompleteSuggestions.children.length > 0) {
+                 autocompleteSuggestions.style.display = 'block';
+            } else {
+                 closeAllSuggestions();
+            }
+            
+            // Also filter the main grid as the user types (live search)
+            filterAndRenderVideoGrid(val); 
+        }
+        
+        function addActive(x) {
+            if (!x) return false;
+            removeActive(x);
+            if (currentFocus >= x.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = (x.length - 1);
+            x[currentFocus].classList.add("autocomplete-active");
+        }
+        
+        function removeActive(x) {
+            for (var i = 0; i < x.length; i++) {
+                x[i].classList.remove("autocomplete-active");
+            }
+        }
+        
+        // Global function for inline onkeydown event
+        window.handleSuggestionNavigation = function(e) {
+            let x = autocompleteSuggestions.getElementsByTagName("div");
+            if (e.keyCode == 40) { // Arrow Down
+                currentFocus++;
+                addActive(x);
+            } else if (e.keyCode == 38) { // Arrow Up
+                currentFocus--;
+                addActive(x);
+            } else if (e.keyCode == 13) { // Enter Key
+                e.preventDefault();
+                if (currentFocus > -1) {
+                    // Click the active suggestion
+                    if (x) x[currentFocus].click();
+                } else {
+                    // If no suggestion is active, perform the search directly on the input value
+                    closeAllSuggestions();
+                    listCategoryFilter.value = 'All'; // Reset category filter on search
+                    filterAndRenderVideoGrid(videoSearchInput.value);
+                }
+            }
+        }
+        
+        // --- Event Listeners for Search ---
+        videoSearchInput.addEventListener('input', autocompleteSearch);
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function (e) {
+            if (e.target !== videoSearchInput && e.target.parentNode !== autocompleteSuggestions) {
+                closeAllSuggestions();
+            }
+        });
+        
+        // Clear search when changing filter
+        listCategoryFilter.addEventListener('change', function() {
+            videoSearchInput.value = ''; // Clear search when category changes
+            closeAllSuggestions();
+            filterAndRenderVideoGrid(); 
+        });
+
+
         // --- Data Listeners ---
         videosRef.on('value', (snapshot) => {
             const data = snapshot.val();
@@ -667,7 +833,8 @@
             
             // Update grid view if the List tab is currently active
             if (document.getElementById('listMasterSection').classList.contains('active')) {
-                filterAndRenderVideoGrid(); 
+                // Pass the current search query to maintain filter state
+                filterAndRenderVideoGrid(videoSearchInput.value); 
             }
             
         }, (error) => {
@@ -707,6 +874,8 @@
             // Special action for the list tab
             if (targetId === 'listMasterSection') {
                 listCategoryFilter.value = 'All';
+                videoSearchInput.value = ''; // Clear search input when switching to the tab
+                closeAllSuggestions();
                 filterAndRenderVideoGrid(); 
             }
             
@@ -725,4 +894,4 @@
         switchTab('videoMasterSection');
     </script>
 </body>
-</html>
+                                                                          </html>
